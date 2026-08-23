@@ -44,7 +44,7 @@ CLIENT_GAME_KEY = 'clientGameKey'
 
 WS_TOKEN = init_token()
 
-WS_TICK_RATE = 1/30
+WS_TICK_RATE = 12
 
 #GAME
 CELL_WIDTH = 16
@@ -91,12 +91,22 @@ class Game:
         #uri = "ws://127.0.0.1:8000/ws"
         async with websockets.connect(uri) as ws:
             await self.initialize_client(ws)
+            a = asyncio.get_event_loop().time()
             while self.running:
+                start_time = asyncio.get_event_loop().time()
+
+                print(asyncio.get_event_loop().time()-a)
+                a = asyncio.get_event_loop().time()
+
                 msg = {WS_TOKEN:self.last_arrow_pressed}
                 response = await self.send_msg(ws,msg)
-                print(response)
                 self.parse_delta(response)
-                await asyncio.sleep(WS_TICK_RATE)
+
+                elapsed = asyncio.get_event_loop().time() - start_time
+                remaining = (1.0 / WS_TICK_RATE) - elapsed
+                
+                if remaining > 0:
+                    await asyncio.sleep(remaining)
 
     async def initialize_client(self,ws: websockets.ClientConnection):
         msg = {WS_TOKEN:INIT_CLIENT_CMD}
@@ -151,8 +161,6 @@ class Game:
         elif pressed_keys[K_DOWN]: self.last_arrow_pressed = INPUT_K_DOWN
         elif pressed_keys[K_LEFT]: self.last_arrow_pressed = INPUT_K_LEFT
         elif pressed_keys[K_RIGHT]: self.last_arrow_pressed = INPUT_K_RIGHT
-        else:
-            self.last_arrow_pressed = INPUT_NONE
 
 class Cell(pygame.sprite.Sprite):
     def __init__(self,x,y):
