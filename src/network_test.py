@@ -44,13 +44,11 @@ class Game:
         while self.is_running:
             time.sleep(1)
 
-        #game loop
-
     async def websocket_loop(self):
         print(2)
         await self.initialize_websocket()
 
-        await self.client_webhook()
+        try:
 
     async def initialize_websocket(self):
         print(3)
@@ -59,18 +57,11 @@ class Game:
             self.ws = await websockets.connect(WS_URI)
             print(f'Connected to {WS_URI}')
             await self.ws.send(json.dumps(data))
-            return True
+            response = await self.ws.recv()
+            print(json.loads(response))
         except Exception as e:
             print(f"Failed to connect to {WS_URI}: {e}")
             return False
-
-    async def client_webhook(self):
-        try:
-            while self.is_running:
-                data = await self.ws.recv()
-                print(data)
-        except Exception as e:
-            print(f'Failed waiting for delta: {e}')
 
     def start_websocket(self):
         print(1)
