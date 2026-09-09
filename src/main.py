@@ -73,7 +73,7 @@ class Game:
         self.running = True
         self.sprites_dict: Dict[str,Cell] = {}
         self.requests_thread = threading.Thread(target=self.start_websocket,daemon=True)
-        self.last_arrow_pressed = None
+        self.last_arrow_pressed = INPUT_K_RIGHT
 
         self.player_id = ''
 
@@ -87,18 +87,20 @@ class Game:
         pygame.quit()
 
     async def websocket_loop(self):
-        uri = "ws://18.221.38.228:8000/ws"
-        #uri = "ws://127.0.0.1:8000/ws"
+        #uri = "ws://18.221.38.228:8000/ws"
+        uri = "ws://127.0.0.1:8000/ws"
         async with websockets.connect(uri) as ws:
             await self.initialize_client(ws)
-            a = asyncio.get_event_loop().time()
             while self.running:
                 start_time = asyncio.get_event_loop().time()
 
-                print(asyncio.get_event_loop().time()-a)
-                a = asyncio.get_event_loop().time()
-
-                msg = {WS_TOKEN:self.last_arrow_pressed}
+                #msg = {WS_TOKEN:self.last_arrow_pressed}
+                msg = {
+                    'token':WS_TOKEN,
+                    'type':'clientInput',
+                    'data':self.last_arrow_pressed
+                }
+                
                 response = await self.send_msg(ws,msg)
                 self.parse_delta(response)
 
@@ -110,9 +112,13 @@ class Game:
 
     async def initialize_client(self,ws: websockets.ClientConnection):
         msg = {WS_TOKEN:INIT_CLIENT_CMD}
+        msg = {
+            'token':WS_TOKEN,
+            'type':INIT_CLIENT_CMD,
+            'data':None
+        }
         response = await self.send_msg(ws,msg)
-        self.player_id = response[CLIENT_GAME_KEY]
-        print(self.player_id)
+        print(response)
 
     async def send_msg(self,ws,msg):
             await ws.send(json.dumps(msg))
@@ -121,12 +127,15 @@ class Game:
             return response_dict
 
     def parse_delta(self,response):
-        for key,value in response.items():
-            if key in self.sprites_dict:
-                self.sprites_dict[key].update_coords(x=value['x'],y=value['y'])
+        for ent in response['data']['update']:
+            ent_id = ent['entID']
+            if ent_id in self.sprites_dict:
+                self.sprites_dict[ent_id].update_coords(x=ent['x'],y=ent['y'])
             else:
-                self.sprites_dict[key] = Cell(x=value['x'],y=value['y'])
+                self.sprites_dict[ent_id] = Cell(x=ent['x'],y=ent['y'])
 
+        for ent in response['data']['delete']:
+            pass
     def start_websocket(self):
         asyncio.run(self.websocket_loop())  
     
