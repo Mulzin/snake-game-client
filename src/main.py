@@ -5,6 +5,7 @@ import asyncio
 import json
 import secrets
 import time
+import logging
 import argparse
 from pathlib import Path
 from typing import Dict
@@ -17,6 +18,8 @@ from pygame.locals import (
     KEYDOWN,
     QUIT,
 )
+
+logging.basicConfig(level=logging.INFO)
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--tokenpath', default='ws-token.json')
@@ -91,10 +94,12 @@ class Game:
         uri = "ws://127.0.0.1:8000/ws"
         async with websockets.connect(uri) as ws:
             await self.initialize_client(ws)
+            timer = time.time()
             while self.running:
+                #print(time.time()-timer)
+                timer = time.time()
                 start_time = asyncio.get_event_loop().time()
 
-                #msg = {WS_TOKEN:self.last_arrow_pressed}
                 msg = {
                     'token':WS_TOKEN,
                     'type':'clientInput',
@@ -118,7 +123,6 @@ class Game:
             'data':None
         }
         response = await self.send_msg(ws,msg)
-        print(response)
 
     async def send_msg(self,ws,msg):
             await ws.send(json.dumps(msg))
@@ -132,12 +136,13 @@ class Game:
             if ent_id in self.sprites_dict:
                 self.sprites_dict[ent_id].update_coords(x=ent['x'],y=ent['y'])
             else:
-                self.sprites_dict[ent_id] = Cell(x=ent['x'],y=ent['y'])
+                self.sprites_dict[ent_id] = Cell(x=ent['x'],y=ent['y'],rgb=ent['rgb'])
 
         for ent in response['data']['delete']:
-            pass
+            self.sprites_dict.pop(ent['tokenId'])
+            
     def start_websocket(self):
-        asyncio.run(self.websocket_loop())  
+        asyncio.run(self.websocket_loop()) 
     
     def game_loop(self):
         clock = pygame.time.Clock()
@@ -172,10 +177,12 @@ class Game:
         elif pressed_keys[K_RIGHT]: self.last_arrow_pressed = INPUT_K_RIGHT
 
 class Cell(pygame.sprite.Sprite):
-    def __init__(self,x,y):
+    def __init__(self,
+            x,y,
+            rgb=CELL_BG):
         super(Cell, self).__init__()
         self.surf = pygame.Surface((CELL_WIDTH,CELL_HEIGHT))
-        self.surf.fill(CELL_BG)
+        self.surf.fill(rgb)
         self.rect = self.surf.get_rect()
         self.rect.x = x*CELL_WIDTH
         self.rect.y = y*CELL_HEIGHT
@@ -186,16 +193,6 @@ class Cell(pygame.sprite.Sprite):
     def update_coords(self,x,y):
         self.rect.x=x*CELL_WIDTH
         self.rect.y=y*CELL_HEIGHT
-
-    def add_tail(self):
-        print(self.rect.x,self.rect.y)
-        if self.tail:
-            self.tail.add_tail()
-            return
-        x=self.rect.x-self.angle[0]*CELL_WIDTH
-        y=self.rect.y-self.angle[1]*CELL_HEIGHT
-        self.tail = Cell(x=x,y=y,angle=self.angle,tick_count=self.tick_count)
-        print(self.tail.angle)
 
 if __name__ == '__main__':
     game=Game()
