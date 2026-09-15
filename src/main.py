@@ -76,7 +76,7 @@ class Game:
         self.running = True
         self.sprites_dict: Dict[str,Cell] = {}
         self.requests_thread = threading.Thread(target=self.start_websocket,daemon=True)
-        self.last_arrow_pressed = INPUT_K_RIGHT
+        self.last_arrow_pressed = INPUT_NONE
 
         self.player_id = ''
 
