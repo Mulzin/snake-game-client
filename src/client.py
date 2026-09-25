@@ -130,15 +130,15 @@ class Game:
             response_dict = json.loads(response)
             return response_dict
 
-    def parse_delta(self,response):
-        for ent in response['data']['update']:
+    def parse_delta(self,package):
+        for ent in package['data']['update']:
             ent_id = ent['entID']
             if ent_id in self.sprites_dict:
                 self.sprites_dict[ent_id].update_coords(x=ent['x'],y=ent['y'])
             else:
                 self.sprites_dict[ent_id] = Cell(x=ent['x'],y=ent['y'],rgb=ent['rgb'])
 
-        for ent in response['data']['delete']:
+        for ent in package['data']['delete']:
             self.sprites_dict.pop(ent['tokenId'])
             
     def start_websocket(self):
